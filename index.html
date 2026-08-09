@@ -1,26 +1,46 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>avatardatusa</title>
-  </head>
-  <body>
+<html lang="es">
 
-    <!-- Encabezado DATUSA -->
-  <div id="brand-overlay">
-    <h1>DATUSA</h1>
-    <p>Aprende desarrollo Web 3D</p>
-  </div>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DATUSA</title>
+</head>
 
-  <!-- Botones de Interacción -->
-  <div id="ui-controls">
-    <button class="btn" id="btn-reposo">Reposo</button>
-    <button class="btn" id="btn-platicar">Pensando</button>
-    <button class="btn" id="btn-correr">Corriendo</button>
-  </div>
+<body>
+
+  
+  <!-- ========================================= LOADING MANAGER ========================================= -->
+  <div id="loader">
+    <div class="loader-content">
+      <h2>Experiencia 3D</h2>
+      <p id="loader-text"> Cargando experiencia 3D... 0% </p>
+      <div class="loader-bar">
+        <div id="loader-progress" class="loader-progress"> </div>
+      </div>
+    </div>  
+  </div> <!-- ========================================= ESCENA 3D ========================================= -->
+
+  <div class="canvas-container">
     
-    <script type="module" src="/src/main.js"></script>
-  </body>
+    <!-- ENCABEZADO SUPERIOR AGREGADO -->
+    <div class="datusa-intro">
+      <h1>DATUSA</h1>
+      <p>Tú desarrollas el sitio 2D.</p>
+      <p>DATUSA crea la experiencia 3D.</p>
+    </div>
+
+    <canvas id="avatar-canvas"></canvas>
+    <!-- ===================================== BOTONES ===================================== -->
+    <div class="avatar-controls"> 
+        <button id="btn-reposo"> Reposo </button> 
+        <button id="btn-platicar"> Platicar</button> 
+        <button id="btn-correr"> Correr</button>
+     </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>

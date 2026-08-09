@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Timer } from 'three';
 
 // --- CONFIGURACIÓN PREVIA (Igual a tu código) ---
 const scene = new THREE.Scene();
@@ -123,12 +124,16 @@ window.addEventListener('resize', () => {
 });
 
 // 7. Loop
-const clock = new THREE.Clock();
+const timer = new Timer(); // Reemplaza a THREE.Clock()
 
 function animate() {
   requestAnimationFrame(animate);
 
-  const delta = clock.getDelta();
+// Actualizamos el temporizador enviando el timestamp del requestAnimationFrame
+  timer.update();
+  // Obtenemos el delta de tiempo directamente del Timer
+  const delta = timer.getDelta();
+
   if (mixer) mixer.update(delta);
 
   controls.update();

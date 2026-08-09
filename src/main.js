@@ -1,143 +1,992 @@
 import './style.css';
+
 import * as THREE from 'three';
+
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Timer } from 'three';
 
-// --- CONFIGURACIÓN PREVIA (Igual a tu código) ---
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x050b14, 0.05);
 
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 1.5, 4.5);
+// ============================================================
+// CONFIGURACIÓN DEL DISPOSITIVO
+// ============================================================
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+function getDeviceType() {
 
-renderer.shadowMap.enabled = true;
-document.body.appendChild(renderer.domElement);
+    const width = window.innerWidth;
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.target.set(0, 1, 0);
+    if (width <= 480) {
+        return 'mobile';
+    }
 
-// Iluminación
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-scene.add(ambientLight);
+    if (width <= 768) {
+        return 'tablet';
+    }
 
-const mainLight = new THREE.DirectionalLight(0xffffff, 2);
-mainLight.position.set(3, 5, 3);
-mainLight.castShadow = true;
-scene.add(mainLight);
+    return 'desktop';
+}
 
-const rimLight = new THREE.PointLight(0x00d2ff, 3, 10);
-rimLight.position.set(0, 0.2, 0);
-scene.add(rimLight);
 
-// Escenario
-const platformGeo = new THREE.CylinderGeometry(2, 2.2, 0.2, 64);
-const platformMat = new THREE.MeshStandardMaterial({ color: 0x101b2b, roughness: 0.3, metalness: 0.8 });
-const platform = new THREE.Mesh(platformGeo, platformMat);
-platform.position.y = -0.1;
-platform.receiveShadow = true;
-scene.add(platform);
+let deviceType = getDeviceType();
 
-// Variables para Animaciones y Modelo
+
+// ============================================================
+// LOADING MANAGER
+// ============================================================
+
+const loadingManager =
+    new THREE.LoadingManager();
+
+
+// Elementos del Loading Manager
+const loaderScreen =
+    document.getElementById('loader');
+
+const loaderProgress =
+    document.getElementById('loader-progress');
+
+const loaderText =
+    document.getElementById('loader-text');
+
+
+// ============================================================
+// INICIO DE CARGA
+// ============================================================
+
+loadingManager.onStart =
+    function (url, itemsLoaded, itemsTotal) {
+
+        console.log(
+            `Iniciando carga: ${url}`
+        );
+
+        if (loaderScreen) {
+            loaderScreen.classList.remove(
+                'loader-hidden'
+            );
+        }
+    };
+
+
+// ============================================================
+// PROGRESO
+// ============================================================
+
+loadingManager.onProgress =
+    function (
+        url,
+        itemsLoaded,
+        itemsTotal
+    ) {
+
+        const progress =
+            Math.round(
+                (itemsLoaded /
+                    itemsTotal) *
+                100
+            );
+
+
+        console.log(
+            `Cargando: ${progress}%`
+        );
+
+
+        // Barra de progreso
+        if (loaderProgress) {
+
+            loaderProgress.style.width =
+                `${progress}%`;
+        }
+
+
+        // Texto
+        if (loaderText) {
+
+            loaderText.textContent =
+                `Cargando experiencia 3D... ${progress}%`;
+        }
+    };
+
+
+// ============================================================
+// CARGA COMPLETADA
+// ============================================================
+
+loadingManager.onLoad =
+    function () {
+
+        console.log(
+            'Todos los recursos han sido cargados.'
+        );
+
+
+        if (loaderText) {
+
+            loaderText.textContent =
+                'Experiencia 3D lista';
+        }
+
+
+        if (loaderProgress) {
+
+            loaderProgress.style.width =
+                '100%';
+        }
+
+
+        // Pequeña pausa para que
+        // el usuario vea el 100%
+        setTimeout(() => {
+
+            if (loaderScreen) {
+
+                loaderScreen.classList.add(
+                    'loader-hidden'
+                );
+            }
+
+        }, 500);
+    };
+
+
+// ============================================================
+// ERROR DE CARGA
+// ============================================================
+
+loadingManager.onError =
+    function (url) {
+
+        console.error(
+            `Error cargando: ${url}`
+        );
+
+
+        if (loaderText) {
+
+            loaderText.textContent =
+                'No se pudo cargar uno de los recursos.';
+        }
+    };
+
+
+// ============================================================
+// ESCENA
+// ============================================================
+
+const scene =
+    new THREE.Scene();
+
+
+// Niebla
+scene.fog =
+    new THREE.FogExp2(
+        0x050b14,
+        0.05
+    );
+
+
+// ============================================================
+// CONTENEDOR
+// ============================================================
+
+const canvasContainer =
+    document.querySelector(
+        '.canvas-container'
+    );
+
+
+// ============================================================
+// DIMENSIONES INICIALES
+// ============================================================
+
+const initialWidth =
+    canvasContainer
+        ? canvasContainer.clientWidth
+        : window.innerWidth;
+
+
+const initialHeight =
+    canvasContainer
+        ? canvasContainer.clientHeight
+        : window.innerHeight;
+
+
+// ============================================================
+// CÁMARA
+// ============================================================
+
+const camera =
+    new THREE.PerspectiveCamera(
+
+        deviceType === 'mobile'
+            ? 50
+            : 45,
+
+        initialWidth /
+            initialHeight,
+
+        0.1,
+
+        100
+    );
+
+
+// ============================================================
+// POSICIÓN DE CÁMARA
+// ============================================================
+
+function setCameraPosition() {
+
+    if (deviceType === 'mobile') {
+
+        camera.position.set(
+            0,
+            1.55,
+            5.2
+        );
+
+    } else if (deviceType === 'tablet') {
+
+        camera.position.set(
+            0,
+            1.5,
+            4.8
+        );
+
+    } else {
+
+        camera.position.set(
+            0,
+            1.5,
+            4.5
+        );
+    }
+}
+
+
+setCameraPosition();
+
+
+// ============================================================
+// RENDERER
+// ============================================================
+
+const canvas =
+    document.getElementById(
+        'avatar-canvas'
+    );
+
+
+// Si no existe #avatar-canvas,
+// creamos uno automáticamente
+const rendererCanvas =
+    canvas ||
+    document.createElement('canvas');
+
+
+if (!canvas) {
+
+    rendererCanvas.id =
+        'avatar-canvas';
+
+    if (canvasContainer) {
+
+        canvasContainer.appendChild(
+            rendererCanvas
+        );
+
+    } else {
+
+        document.body.appendChild(
+            rendererCanvas
+        );
+    }
+}
+
+
+const renderer =
+    new THREE.WebGLRenderer({
+
+        canvas:
+            rendererCanvas,
+
+        antialias:
+            true,
+
+        powerPreference:
+            'high-performance'
+    });
+
+
+// ============================================================
+// PIXEL RATIO
+// ============================================================
+
+function updatePixelRatio() {
+
+    const maxPixelRatio =
+        deviceType === 'mobile'
+            ? 1.5
+            : 2;
+
+
+    renderer.setPixelRatio(
+
+        Math.min(
+            window.devicePixelRatio,
+            maxPixelRatio
+        )
+    );
+}
+
+
+updatePixelRatio();
+
+
+// ============================================================
+// TAMAÑO DEL RENDERER
+// ============================================================
+
+function updateRendererSize() {
+
+    const container =
+        document.querySelector(
+            '.canvas-container'
+        );
+
+
+    const width =
+        container
+            ? container.clientWidth
+            : window.innerWidth;
+
+
+    const height =
+        container
+            ? container.clientHeight
+            : window.innerHeight;
+
+
+    renderer.setSize(
+        width,
+        height,
+        false
+    );
+
+
+    camera.aspect =
+        width / height;
+
+
+    camera.updateProjectionMatrix();
+}
+
+
+updateRendererSize();
+
+
+// ============================================================
+// SOMBRAS
+// ============================================================
+
+renderer.shadowMap.enabled =
+    true;
+
+
+renderer.shadowMap.type =
+    THREE.PCFSoftShadowMap;
+
+
+// En móviles podemos reducir
+// ligeramente el coste de sombras
+if (deviceType === 'mobile') {
+
+    renderer.shadowMap.autoUpdate =
+        true;
+}
+
+
+// ============================================================
+// ORBIT CONTROLS
+// ============================================================
+
+const controls =
+    new OrbitControls(
+        camera,
+        renderer.domElement
+    );
+
+
+// Suavidad
+controls.enableDamping =
+    true;
+
+
+controls.dampingFactor =
+    0.05;
+
+
+// No desplazar la escena
+controls.enablePan =
+    false;
+
+
+// Objetivo
+controls.target.set(
+    0,
+    1,
+    0
+);
+
+
+// Zoom
+controls.enableZoom =
+    true;
+
+
+controls.minDistance =
+    deviceType === 'mobile'
+        ? 3.2
+        : 2.8;
+
+
+controls.maxDistance =
+    deviceType === 'mobile'
+        ? 7
+        : 6;
+
+
+// Velocidad de rotación
+controls.rotateSpeed =
+    deviceType === 'mobile'
+        ? 0.45
+        : 0.7;
+
+
+// Velocidad del zoom
+controls.zoomSpeed =
+    deviceType === 'mobile'
+        ? 0.5
+        : 0.8;
+
+
+// Evitar mirar demasiado
+// hacia arriba/abajo
+controls.minPolarAngle =
+    THREE.MathUtils.degToRad(
+        55
+    );
+
+
+controls.maxPolarAngle =
+    THREE.MathUtils.degToRad(
+        100
+    );
+
+
+controls.update();
+
+
+// ============================================================
+// ILUMINACIÓN
+// ============================================================
+
+const ambientLight =
+    new THREE.AmbientLight(
+        0xffffff,
+        0.8
+    );
+
+scene.add(
+    ambientLight
+);
+
+
+// Luz principal
+const mainLight =
+    new THREE.DirectionalLight(
+        0xffffff,
+        2
+    );
+
+
+mainLight.position.set(
+    3,
+    5,
+    3
+);
+
+
+mainLight.castShadow =
+    true;
+
+
+// Configuración de sombra
+mainLight.shadow.mapSize.width =
+    deviceType === 'mobile'
+        ? 1024
+        : 2048;
+
+
+mainLight.shadow.mapSize.height =
+    deviceType === 'mobile'
+        ? 1024
+        : 2048;
+
+
+mainLight.shadow.camera.near =
+    0.1;
+
+
+mainLight.shadow.camera.far =
+    20;
+
+
+scene.add(
+    mainLight
+);
+
+
+// ============================================================
+// RIM LIGHT
+// ============================================================
+
+const rimLight =
+    new THREE.PointLight(
+        0x00d2ff,
+        3,
+        10
+    );
+
+
+rimLight.position.set(
+    0,
+    0.2,
+    0
+);
+
+
+scene.add(
+    rimLight
+);
+
+
+// ============================================================
+// PLATAFORMA
+// ============================================================
+
+const platformGeo =
+    new THREE.CylinderGeometry(
+        2,
+        2.2,
+        0.2,
+        deviceType === 'mobile'
+            ? 32
+            : 64
+    );
+
+
+const platformMat =
+    new THREE.MeshStandardMaterial({
+
+        color:
+            0x101b2b,
+
+        roughness:
+            0.3,
+
+        metalness:
+            0.8
+    });
+
+
+const platform =
+    new THREE.Mesh(
+        platformGeo,
+        platformMat
+    );
+
+
+platform.position.y =
+    -0.1;
+
+
+platform.receiveShadow =
+    true;
+
+
+scene.add(
+    platform
+);
+
+
+// ============================================================
+// ANIMACIONES
+// ============================================================
+
 let mixer;
+
 const actions = {};
+
 let activeAction;
 
-function fadeToAction(name, duration = 0.5) {
-  const previousAction = activeAction;
-  activeAction = actions[name];
 
-  if (previousAction && previousAction !== activeAction) {
-    previousAction.fadeOut(duration);
-  }
+// ============================================================
+// CAMBIAR ANIMACIÓN
+// ============================================================
 
-  if (activeAction) {
-    activeAction
-      .reset()
-      .setEffectiveTimeScale(1)
-      .setEffectiveWeight(1)
-      .fadeIn(duration)
-      .play();
-  }
+function fadeToAction(
+    name,
+    duration = 0.5
+) {
+
+    const previousAction =
+        activeAction;
+
+
+    activeAction =
+        actions[name];
+
+
+    if (
+        previousAction &&
+        previousAction !==
+        activeAction
+    ) {
+
+        previousAction.fadeOut(
+            duration
+        );
+    }
+
+
+    if (activeAction) {
+
+        activeAction
+            .reset()
+            .setEffectiveTimeScale(1)
+            .setEffectiveWeight(1)
+            .fadeIn(duration)
+            .play();
+    }
 }
 
-// 5. Carga Paralela del Modelo y Animaciones Independientes
-const loader = new GLTFLoader();
 
-// Promesas para cargar todos los archivos .glb en paralelo
+// ============================================================
+// GLTF LOADER
+// ============================================================
+
+// IMPORTANTE:
+// El LoadingManager se conecta
+// al GLTFLoader.
+const loader =
+    new GLTFLoader(
+        loadingManager
+    );
+
+
+// ============================================================
+// CARGA DE MODELOS
+// ============================================================
+
 Promise.all([
-  loader.loadAsync('/models/avatar.glb'),
-  loader.loadAsync('/models/reposo.glb'),
-  loader.loadAsync('/models/platicar.glb'),
-  loader.loadAsync('/models/correr.glb')
-]).then(([avatarGltf, reposoGltf, platicarGltf, correrGltf]) => {
 
-  // A. Añadir el Avatar a la escena
-  const model = avatarGltf.scene;
-  model.traverse((node) => {
-    if (node.isMesh) node.castShadow = true;
-  });
-  scene.add(model);
+    loader.loadAsync(
+        '/models/avatar.glb'
+    ),
 
-  // B. Inicializar el Mezclador de Animaciones en el Avatar
-  mixer = new THREE.AnimationMixer(model);
+    loader.loadAsync(
+        '/models/reposo.glb'
+    ),
 
-  // C. Vincular las animaciones de los archivos externos al avatar
-  if (reposoGltf.animations.length > 0) {
-    actions['reposo'] = mixer.clipAction(reposoGltf.animations[0]);
-  }
-  
-  if (platicarGltf.animations.length > 0) {
-    actions['platicar'] = mixer.clipAction(platicarGltf.animations[0]);
-  }
-  
-  if (correrGltf.animations.length > 0) {
-    actions['correr'] = mixer.clipAction(correrGltf.animations[0]);
-  }
+    loader.loadAsync(
+        '/models/platicar.glb'
+    ),
 
-  // D. Iniciar con la animación de Reposo
-  if (actions['reposo']) {
-    fadeToAction('reposo', 0);
-  }
+    loader.loadAsync(
+        '/models/correr.glb'
+    )
 
-}).catch((error) => {
-  console.error('Error al cargar uno o más archivos .glb:', error);
-});
+])
+.then(
+    (
+        [
+            avatarGltf,
+            reposoGltf,
+            platicarGltf,
+            correrGltf
+        ]
+    ) => {
 
-// 6. Listeners para los Botones
-document.getElementById('btn-reposo').addEventListener('click', () => fadeToAction('reposo'));
-document.getElementById('btn-platicar').addEventListener('click', () => fadeToAction('platicar'));
-document.getElementById('btn-correr').addEventListener('click', () => fadeToAction('correr'));
 
-// Responsive
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // ==================================================
+        // AVATAR
+        // ==================================================
 
-});
+        const model =
+            avatarGltf.scene;
 
-// 7. Loop
-const timer = new Timer(); // Reemplaza a THREE.Clock()
+
+        model.traverse(
+            (node) => {
+
+                if (node.isMesh) {
+
+                    node.castShadow =
+                        true;
+
+                    node.receiveShadow =
+                        true;
+                }
+            }
+        );
+
+
+        scene.add(
+            model
+        );
+
+
+        // ==================================================
+        // MIXER
+        // ==================================================
+
+        mixer =
+            new THREE.AnimationMixer(
+                model
+            );
+
+
+        // ==================================================
+        // REPOSO
+        // ==================================================
+
+        if (
+            reposoGltf.animations.length >
+            0
+        ) {
+
+            actions['reposo'] =
+                mixer.clipAction(
+                    reposoGltf.animations[0]
+                );
+        }
+
+
+        // ==================================================
+        // PLATICAR
+        // ==================================================
+
+        if (
+            platicarGltf.animations.length >
+            0
+        ) {
+
+            actions['platicar'] =
+                mixer.clipAction(
+                    platicarGltf.animations[0]
+                );
+        }
+
+
+        // ==================================================
+        // CORRER
+        // ==================================================
+
+        if (
+            correrGltf.animations.length >
+            0
+        ) {
+
+            actions['correr'] =
+                mixer.clipAction(
+                    correrGltf.animations[0]
+                );
+        }
+
+
+        // ==================================================
+        // ANIMACIÓN INICIAL
+        // ==================================================
+
+        if (
+            actions['reposo']
+        ) {
+
+            fadeToAction(
+                'reposo',
+                0
+            );
+        }
+
+    }
+)
+.catch(
+    (error) => {
+
+        console.error(
+            'Error al cargar los archivos GLB:',
+            error
+        );
+
+
+        if (loaderText) {
+
+            loaderText.textContent =
+                'Error al cargar la experiencia 3D.';
+        }
+    }
+);
+
+
+// ============================================================
+// BOTONES
+// ============================================================
+
+const btnReposo =
+    document.getElementById(
+        'btn-reposo'
+    );
+
+
+const btnPlaticar =
+    document.getElementById(
+        'btn-platicar'
+    );
+
+
+const btnCorrer =
+    document.getElementById(
+        'btn-correr'
+    );
+
+
+if (btnReposo) {
+
+    btnReposo.addEventListener(
+        'click',
+        () => {
+
+            fadeToAction(
+                'reposo'
+            );
+        }
+    );
+}
+
+
+if (btnPlaticar) {
+
+    btnPlaticar.addEventListener(
+        'click',
+        () => {
+
+            fadeToAction(
+                'platicar'
+            );
+        }
+    );
+}
+
+
+if (btnCorrer) {
+
+    btnCorrer.addEventListener(
+        'click',
+        () => {
+
+            fadeToAction(
+                'correr'
+            );
+        }
+    );
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+window.addEventListener(
+    'resize',
+    () => {
+
+        const newDeviceType =
+            getDeviceType();
+
+
+        if (
+            newDeviceType !==
+            deviceType
+        ) {
+
+            deviceType =
+                newDeviceType;
+
+
+            setCameraPosition();
+
+
+            updatePixelRatio();
+        }
+
+
+        updateRendererSize();
+    }
+);
+
+
+// ============================================================
+// TIMER
+// ============================================================
+
+const timer =
+    new Timer();
+
+
+// ============================================================
+// ANIMACIÓN PRINCIPAL
+// ============================================================
 
 function animate() {
-  requestAnimationFrame(animate);
 
-// Actualizamos el temporizador enviando el timestamp del requestAnimationFrame
-  timer.update();
-  // Obtenemos el delta de tiempo directamente del Timer
-  const delta = timer.getDelta();
+    requestAnimationFrame(
+        animate
+    );
 
-  if (mixer) mixer.update(delta);
 
-  controls.update();
-  renderer.render(scene, camera);
+    // Actualizar Timer
+    timer.update();
+
+
+    const delta =
+        timer.getDelta();
+
+
+    // Actualizar animación
+    if (mixer) {
+
+        mixer.update(
+            delta
+        );
+    }
+
+
+    // Actualizar controles
+    controls.update();
+
+
+    // Render
+    renderer.render(
+        scene,
+        camera
+    );
 }
+
+
+// ============================================================
+// INICIAR LOOP
+// ============================================================
 
 animate();
