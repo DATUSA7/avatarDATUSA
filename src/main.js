@@ -87,9 +87,7 @@ loadingManager.onProgress =
             );
 
 
-        console.log(
-            `Cargando: ${progress}%`
-        );
+        //console.log(`Cargando: ${progress}%`);
 
 
         // Barra de progreso
